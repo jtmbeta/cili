@@ -93,7 +93,7 @@ def get_eyelink_mask_idxs(samples, events, find_recovery=True):
     bi = ev_row_idxs(samples, be)
     return bi
 
-def mask_eyelink_blinks(samples, events, mask_fields=["pup_l"], find_recovery=True):
+def mask_eyelink_blinks(samples, events, mask_fields=["pup_l"], find_recovery=True, add_interp_field=False):
     """ Sets the value of all untrustworthy data points to NaN.
 
     Per the EyeLink documentation, we include blink events as well as any
@@ -110,12 +110,20 @@ def mask_eyelink_blinks(samples, events, mask_fields=["pup_l"], find_recovery=Tr
     mask_fields (list of strings)
         The columns you'd like set to NaN for bad event indices.
     find_recovery (bool)
-        Defaul True. If true, we will use adjust_eyelink_recov_idxs to find
+        Default True. If true, we will use adjust_eyelink_recov_idxs to find
         the proper ends for blink events.
+    add_interp_field (bool)
+        Default False. If True, adds a field called 'interpolated' to the 
+        samples DataFrame, marking the indices of all samples that were
+        estimated with linear interpolation. This is useful when deciding
+        whether to exclude subjects or individual trials from analysis.
     """
     samps = samples.copy(deep=True)
     indices = get_eyelink_mask_idxs(samps, events, find_recovery=find_recovery)
     samps.loc[indices, mask_fields] = float('nan')
+    if add_interp_fields:
+        samps['interpolated'] = 0
+        samps.loc[indices, 'interpolated'] = 1
     return samps
 
 def mask_zeros(samples, mask_fields=["pup_l"]):
@@ -130,7 +138,7 @@ def mask_zeros(samples, mask_fields=["pup_l"]):
     """
     samps = samples.copy(deep=True)
     for f in mask_fields:
-        samps[samps[f] == 0] = float("nan")
+        samps.loc[samps[f] == 0, f] = float("nan")
     return samps
 
 def interp_zeros(samples, interp_fields=["pup_l"]):
